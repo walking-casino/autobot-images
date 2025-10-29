@@ -1,0 +1,46 @@
+name: Build index.json
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "images/**"
+      - ".github/workflows/build-index.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Generate index.json
+        run: |
+          python - <<'PY'
+          import json, os, time
+          imgs = []
+          for root, _, files in os.walk("images"):
+              for f in files:
+                  if f.lower().endswith((".jpg",".jpeg",".png",".gif",".webp")):
+                      p = os.path.join(root, f).replace("\\","/")
+                      imgs.append(p)
+          base = "https://cdn.jsdelivr.net/gh/walking-casino/autobot-images@main"
+          urls = sorted(f"{base}/{p}" for p in imgs)
+          out = {"version": 1, "updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "images": urls}
+          with open("index.json","w") as fp: json.dump(out, fp, indent=2)
+          print("Wrote index.json with", len(urls), "images")
+          PY
+      - name: Commit index.json
+        run: |
+          if [[ -n "$(git status --porcelain index.json)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add index.json
+            git commit -m "Auto-build index.json"
+            git push
+          else
+            echo "No changes to index.json"
+          fi
