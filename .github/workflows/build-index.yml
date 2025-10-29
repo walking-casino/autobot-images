@@ -17,10 +17,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Generate index.json
+            - name: Generate index.json
         run: |
           python - <<'PY'
           import json, os, time
+          from urllib.parse import quote
           imgs = []
           for root, _, files in os.walk("images"):
               for f in files:
@@ -28,11 +29,18 @@ jobs:
                       p = os.path.join(root, f).replace("\\","/")
                       imgs.append(p)
           base = "https://cdn.jsdelivr.net/gh/walking-casino/autobot-images@main"
-          urls = sorted(f"{base}/{p}" for p in imgs)
-          out = {"version": 1, "updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "images": urls}
-          with open("index.json","w") as fp: json.dump(out, fp, indent=2)
+          # Encode filenames but KEEP slashes between folders
+          urls = [f"{base}/{quote(p, safe='/')}" for p in imgs]
+          out = {
+            "version": 1,
+            "updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "images": sorted(urls)
+          }
+          with open("index.json","w") as fp:
+              json.dump(out, fp, indent=2)
           print("Wrote index.json with", len(urls), "images")
           PY
+
       - name: Commit index.json
         run: |
           if [[ -n "$(git status --porcelain index.json)" ]]; then
