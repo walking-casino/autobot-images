@@ -1,9 +1,22 @@
-{
-  "version": 1,
-  "updated": "2025-10-29T08:34:07Z",
-  "images": [
-    "https://cdn.jsdelivr.net/gh/walking-casino/autobot-images@main/images/Screenshot 2025-10-29 032518.png",
-    "https://cdn.jsdelivr.net/gh/walking-casino/autobot-images@main/images/Screenshot 2025-10-29 032613.png",
-    "https://cdn.jsdelivr.net/gh/walking-casino/autobot-images@main/images/Screenshot 2025-10-29 033317.png"
-  ]
-}
+      - name: Generate index.json
+        run: |
+          python - <<'PY'
+          import json, os, time
+          from urllib.parse import quote
+          imgs = []
+          for root, _, files in os.walk("images"):
+              for f in files:
+                  if f.lower().endswith((".jpg",".jpeg",".png",".gif",".webp")):
+                      p = os.path.join(root, f).replace("\\","/")
+                      imgs.append(p)
+          base = "https://cdn.jsdelivr.net/gh/walking-casino/autobot-images@main"
+          urls = [f"{base}/{quote(p)}" for p in imgs]  # <-- encode path segments
+          out = {
+            "version": 1,
+            "updated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "images": sorted(urls)
+          }
+          with open("index.json","w") as fp:
+              json.dump(out, fp, indent=2)
+          print("Wrote index.json with", len(urls), "images")
+          PY
